@@ -1,8 +1,8 @@
 /*
  *
- *  Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  WSO2 LLC. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
  *  n compliance with the License.
  *  You may obtain a copy of the License at
@@ -26,7 +26,7 @@ import org.wso2.carbon.apimgt.impl.notifier.exceptions.NotifierException;
 
 /**
  * The correlation config notification implementation in which correlation config updates are
- * published to gateway
+ * published to gateway.
  */
 public class CorrelationConfigNotifier extends AbstractNotifier {
 

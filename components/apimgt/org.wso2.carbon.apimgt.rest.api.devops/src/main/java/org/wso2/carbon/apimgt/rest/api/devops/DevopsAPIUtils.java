@@ -18,21 +18,20 @@
 
 package org.wso2.carbon.apimgt.rest.api.devops;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.wso2.carbon.apimgt.api.APIManagementException;
+import org.wso2.carbon.apimgt.api.ExceptionCodes;
 import org.wso2.carbon.apimgt.impl.APIConstants;
 import org.wso2.carbon.apimgt.impl.dto.APILogInfoDTO;
 import org.wso2.carbon.apimgt.impl.dto.CorrelationConfigDTO;
 import org.wso2.carbon.apimgt.impl.dto.CorrelationConfigPropertyDTO;
 import org.wso2.carbon.apimgt.rest.api.devops.dto.CorrelationComponentDTO;
+import org.wso2.carbon.apimgt.rest.api.devops.dto.CorrelationComponentPropertyDTO;
 import org.wso2.carbon.apimgt.rest.api.devops.dto.CorrelationComponentsListDTO;
 import org.wso2.carbon.apimgt.rest.api.devops.dto.LoggingApiOutputDTO;
 import org.wso2.carbon.apimgt.rest.api.devops.dto.LoggingApiOutputListDTO;
-import org.wso2.carbon.apimgt.rest.api.devops.dto.CorrelationComponentPropertyDTO;
-import org.wso2.carbon.logging.correlation.CorrelationLogConfigurable;
-import org.wso2.carbon.logging.correlation.bean.ImmutableCorrelationLogConfig;
-import org.wso2.carbon.logging.correlation.internal.CorrelationLogManager;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Devops util functions.
@@ -40,8 +39,7 @@ import org.wso2.carbon.logging.correlation.internal.CorrelationLogManager;
 public class DevopsAPIUtils {
 
     public static final String[] CORRELATION_DEFAULT_COMPONENTS = { "http", "ldap", "jdbc", "synapse", "method-calls" };
-    public static final String JDBC_COMPONENT_NAME = "jdbc";
-    public static final String DENIED_THREADS_NAME = "deniedThreads";
+
 
     public static boolean validateLogLevel(String logLevel) {
 
@@ -72,10 +70,23 @@ public class DevopsAPIUtils {
      * @param correlationComponentsListDTO the correlation components list dto
      * @return the string with invalid component name
      */
-    public static String validateCorrelationComponentList(CorrelationComponentsListDTO correlationComponentsListDTO) {
+    public static String validateCorrelationComponentList(CorrelationComponentsListDTO correlationComponentsListDTO)
+            throws APIManagementException {
         String[] components = CORRELATION_DEFAULT_COMPONENTS;
         for (CorrelationComponentDTO component : correlationComponentsListDTO.getComponents()) {
             String componentName = component.getName();
+            String enabled = component.getEnabled();
+            List<CorrelationComponentPropertyDTO> properties = component.getProperties();
+            if (componentName == null || enabled == null) {
+                throw new APIManagementException("Invalid Request",
+                        ExceptionCodes.from(ExceptionCodes.CORRELATION_CONFIG_BAD_REQUEST));
+            }
+            for (CorrelationComponentPropertyDTO property: properties) {
+                if (property.getName() == null || property.getValue() == null) {
+                    throw new APIManagementException("Invalid Request",
+                            ExceptionCodes.from(ExceptionCodes.CORRELATION_CONFIG_BAD_REQUEST));
+                }
+            }
             if (Arrays.stream(components).anyMatch(s -> s.equals(componentName))) {
                 continue;
             }
@@ -84,22 +95,6 @@ public class DevopsAPIUtils {
         return null;
     }
 
-    public static CorrelationComponentDTO getCorrelationComponentDTO(String componentName) {
-        CorrelationComponentDTO correlationComponentDTO = new CorrelationComponentDTO();
-        CorrelationLogConfigurable service = CorrelationLogManager.getLogServiceInstance(componentName);
-        ImmutableCorrelationLogConfig config = service.getConfiguration();
-        correlationComponentDTO.setName(componentName);
-        correlationComponentDTO.setEnabled(Boolean.toString(config.isEnable()));
-        if (componentName.equals(JDBC_COMPONENT_NAME)) {
-            CorrelationComponentPropertyDTO propertyDTO = new CorrelationComponentPropertyDTO();
-            propertyDTO.setName(DENIED_THREADS_NAME);
-            propertyDTO.setValue(Arrays.asList(config.getDeniedThreads()));
-            List<CorrelationComponentPropertyDTO> properties = new ArrayList<>();
-            properties.add(propertyDTO);
-            correlationComponentDTO.setProperties(properties);
-        }
-        return correlationComponentDTO;
-    }
 
     public static CorrelationComponentsListDTO getCorrelationComponentsList(
             List<CorrelationConfigDTO> correlationConfigDTOList) {
@@ -128,7 +123,6 @@ public class DevopsAPIUtils {
 
         correlationComponentsListDTO.setComponents(correlationComponentDTOList);
         return correlationComponentsListDTO;
-
     }
 
     public static List<CorrelationConfigDTO> getCorrelationConfigDTOList(
