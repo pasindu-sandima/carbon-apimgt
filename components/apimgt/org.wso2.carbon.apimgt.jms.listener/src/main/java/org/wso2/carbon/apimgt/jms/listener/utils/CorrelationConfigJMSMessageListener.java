@@ -1,8 +1,8 @@
 /*
  *
- *  Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  WSO2 LLC. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
  *  n compliance with the License.
  *  You may obtain a copy of the License at
@@ -24,20 +24,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.apimgt.common.jms.JMSConstants;
+import org.wso2.carbon.apimgt.impl.APIConstants;
+import org.wso2.carbon.apimgt.impl.correlation.CorrelationConfigManager;
+import org.wso2.carbon.apimgt.impl.notifier.events.CorrelationConfigEvent;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageListener;
 import javax.jms.TextMessage;
 import javax.jms.Topic;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.apimgt.api.APIManagementException;
-import org.wso2.carbon.apimgt.common.jms.JMSConstants;
-import org.wso2.carbon.apimgt.impl.APIConstants;
-import org.wso2.carbon.apimgt.impl.correlation.CorrelationConfigManager;
-import org.wso2.carbon.apimgt.impl.notifier.events.CorrelationConfigEvent;
 
+/**
+ * The JMS Message Listener for Correlation Configs.
+ */
 public class CorrelationConfigJMSMessageListener implements MessageListener {
 
     private static final Log log = LogFactory.getLog(CorrelationConfigJMSMessageListener.class);
@@ -65,7 +67,6 @@ public class CorrelationConfigJMSMessageListener implements MessageListener {
                                 log.debug("Event received from the topic of " + jmsDestination.getTopicName());
                             }
                             handleNotificationMessage(payloadData.get(APIConstants.EVENT_TYPE).asText(),
-                                    payloadData.get(APIConstants.EVENT_TIMESTAMP).asLong(),
                                     payloadData.get(APIConstants.EVENT_PAYLOAD).asText());
                         }
                     }
@@ -82,7 +83,7 @@ public class CorrelationConfigJMSMessageListener implements MessageListener {
         }
     }
 
-    private void handleNotificationMessage(String eventType, long timestamp, String encodedEvent) {
+    private void handleNotificationMessage(String eventType, String encodedEvent) {
         byte[] eventDecoded = Base64.decodeBase64(encodedEvent);
         String eventJson = new String(eventDecoded);
 

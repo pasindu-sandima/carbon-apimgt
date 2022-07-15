@@ -169,6 +169,7 @@ import org.wso2.carbon.apimgt.impl.PasswordResolverFactory;
 import org.wso2.carbon.apimgt.impl.RESTAPICacheConfiguration;
 import org.wso2.carbon.apimgt.impl.caching.CacheProvider;
 import org.wso2.carbon.apimgt.impl.dao.ApiMgtDAO;
+import org.wso2.carbon.apimgt.impl.dao.CorrelationConfigDAO;
 import org.wso2.carbon.apimgt.impl.dao.ScopesDAO;
 import org.wso2.carbon.apimgt.impl.dto.APIKeyValidationInfoDTO;
 import org.wso2.carbon.apimgt.impl.dto.APISubscriptionInfoDTO;
@@ -9761,5 +9762,19 @@ public final class APIUtil {
             gatewayVendor = APIConstants.WSO2_GATEWAY_ENVIRONMENT;
         }
         return  gatewayVendor;
+    }
+
+    /**
+     * Add the default correlation configs to the database at the initial server start up.
+     */
+    public static void addDefaultCorrelationConfigs() throws APIManagementException {
+        CorrelationConfigDAO correlationConfigDAO = CorrelationConfigDAO.getInstance();
+
+        if (correlationConfigDAO.isConfigExist()) {
+            log.debug("Default correlation configs are not written to the database again.");
+            return;
+        }
+
+        correlationConfigDAO.addDefaultCorrelationConfigs();
     }
 }

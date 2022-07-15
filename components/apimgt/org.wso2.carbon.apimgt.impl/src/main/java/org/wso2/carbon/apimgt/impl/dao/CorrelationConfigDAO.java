@@ -1,8 +1,8 @@
 /*
  *
- *  Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *  Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  WSO2 LLC. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
  *  n compliance with the License.
  *  You may obtain a copy of the License at
@@ -20,20 +20,19 @@
 
 package org.wso2.carbon.apimgt.impl.dao;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.apimgt.api.APIManagementException;
+import org.wso2.carbon.apimgt.impl.dao.constants.SQLConstants;
+import org.wso2.carbon.apimgt.impl.dto.CorrelationConfigDTO;
+import org.wso2.carbon.apimgt.impl.dto.CorrelationConfigPropertyDTO;
+import org.wso2.carbon.apimgt.impl.utils.APIMgtDBUtil;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.apimgt.api.APIManagementException;
-import org.wso2.carbon.apimgt.api.ExceptionCodes;
-import org.wso2.carbon.apimgt.impl.dao.constants.SQLConstants;
-import org.wso2.carbon.apimgt.impl.dto.CorrelationConfigDTO;
-import org.wso2.carbon.apimgt.impl.dto.CorrelationConfigPropertyDTO;
-import org.wso2.carbon.apimgt.impl.utils.APIMgtDBUtil;
 
 /**
  * Database Access Library for the Correlation Configs Feature.
@@ -47,6 +46,10 @@ public class CorrelationConfigDAO {
     private static final String PROPERTY_NAME = "PROPERTY_NAME";
     private static final String PROPERTY_VALUE = "PROPERTY_VALUE";
     private static final String DENIED_THREADS = "deniedThreads";
+    private static final String[] DEFAULT_CORRELATION_COMPONENTS = {
+            "http", "ldap", "synapse", "jdbc", "method-calls"};
+    private static final String DEFAULT_DENIED_THREADS = "MessageDeliveryTaskThreadPool,HumanTaskServer," +
+            "BPELServer,CarbonDeploymentSchedulerThread";
 
     private CorrelationConfigDAO() {
 
@@ -58,23 +61,31 @@ public class CorrelationConfigDAO {
 
     public boolean updateCorrelationConfigs(List<CorrelationConfigDTO> correlationConfigDTOList)
             throws APIManagementException {
+        String queryConfigs = SQLConstants.UPDATE_CORRELATION_CONFIGS;
+        String queryProps = SQLConstants.UPDATE_CORRELATION_CONFIG_PROPERTIES;
         try (Connection connection = APIMgtDBUtil.getConnection()) {
 
             connection.setAutoCommit(false);
             log.debug("Updating Correlation Configs");
-            try {
+            try (PreparedStatement preparedStatementConfigs = connection.prepareStatement(queryConfigs)) {
                 for (CorrelationConfigDTO correlationConfigDTO : correlationConfigDTOList) {
                     String componentName = correlationConfigDTO.getName();
                     String enabled = correlationConfigDTO.getEnabled();
-                    String queryConfigs = SQLConstants.UPDATE_CORRELATION_CONFIGS;
-                    String queryProps = SQLConstants.UPDATE_CORRELATION_CONFIG_PROPERTIES;
 
-                    PreparedStatement preparedStatementConfigs = connection.prepareStatement(queryConfigs);
                     preparedStatementConfigs.setString(1, enabled);
                     preparedStatementConfigs.setString(2, componentName);
-                    preparedStatementConfigs.executeUpdate();
-                    preparedStatementConfigs.close();
+                    preparedStatementConfigs.addBatch();
+                }
+                preparedStatementConfigs.executeBatch();
+            } catch (SQLException e) {
+                connection.rollback();
+                log.error("Failed to update correlation configs");
+                throw new APIManagementException("Failed to update correlation configs", e);
+            }
 
+            try (PreparedStatement preparedStatementProps = connection.prepareStatement(queryProps)) {
+                for (CorrelationConfigDTO correlationConfigDTO : correlationConfigDTOList) {
+                    String componentName = correlationConfigDTO.getName();
                     List<CorrelationConfigPropertyDTO> correlationConfigPropertyDTOList =
                             correlationConfigDTO.getProperties();
                     if (correlationConfigPropertyDTOList == null) {
@@ -85,28 +96,23 @@ public class CorrelationConfigDAO {
                         String propertyName = correlationConfigPropertyDTO.getName();
                         String propertyValue = String.join(",", correlationConfigPropertyDTO.getValue());
 
-                        if (!propertyName.equals(DENIED_THREADS) || !componentName.equals("jdbc")) {
-                            throw new APIManagementException(
-                                    componentName + " does not have a \"" + propertyName + "\" property");
-                        }
-
-                        PreparedStatement preparedStatementProps = connection.prepareStatement(queryProps);
                         preparedStatementProps.setString(1, propertyValue);
                         preparedStatementProps.setString(2, componentName);
                         preparedStatementProps.setString(3, propertyName);
-                        preparedStatementProps.executeUpdate();
-                        preparedStatementProps.close();
+                        preparedStatementProps.addBatch();
                     }
+                    preparedStatementProps.executeBatch();
                 }
-                connection.commit();
-                return true;
-            } catch (APIManagementException e) {
+            } catch (SQLException e) {
                 connection.rollback();
-                throw new APIManagementException(e.getMessage(),
-                        ExceptionCodes.from(ExceptionCodes.CORRELATION_CONFIG_PROPERTY_NOT_SUPPORTED));
+                log.error("Failed to update correlation configs");
+                throw new APIManagementException("Failed to update correlation configs", e);
             }
+            connection.commit();
+            return true;
 
         } catch (SQLException e) {
+
             log.error("Failed to update correlation configs");
             throw new APIManagementException("Failed to update correlation configs", e);
 
@@ -119,30 +125,29 @@ public class CorrelationConfigDAO {
         String queryProps = SQLConstants.RETRIEVE_CORRELATION_CONFIG_PROPERTIES;
 
         try (Connection connection = APIMgtDBUtil.getConnection();
-                PreparedStatement preparedStatementConfigs = connection.prepareStatement(queryConfigs)) {
+                PreparedStatement preparedStatementConfigs = connection.prepareStatement(queryConfigs);
+                PreparedStatement preparedStatementProps = connection.prepareStatement(queryProps)) {
             try (ResultSet resultSetConfigs = preparedStatementConfigs.executeQuery()) {
                 while (resultSetConfigs.next()) {
                     String componentName = resultSetConfigs.getString(COMPONENT_NAME);
                     String enabled = resultSetConfigs.getString(ENABLED);
 
-                    PreparedStatement preparedStatementProps = connection.prepareStatement(queryProps);
                     preparedStatementProps.setString(1, componentName);
-                    ResultSet resultSetProps = preparedStatementProps.executeQuery();
+                    try (ResultSet resultSetProps = preparedStatementProps.executeQuery()) {
 
-                    List<CorrelationConfigPropertyDTO> correlationConfigPropertyDTOList = new ArrayList<>();
-                    while (resultSetProps.next()) {
-                        String propertyName = resultSetProps.getString(PROPERTY_NAME);
-                        String propertyValue = resultSetProps.getString(PROPERTY_VALUE);
-                        CorrelationConfigPropertyDTO correlationConfigPropertyDTO =
-                                new CorrelationConfigPropertyDTO(propertyName, propertyValue.split(","));
-                        correlationConfigPropertyDTOList.add(correlationConfigPropertyDTO);
+                        List<CorrelationConfigPropertyDTO> correlationConfigPropertyDTOList = new ArrayList<>();
+                        while (resultSetProps.next()) {
+                            String propertyName = resultSetProps.getString(PROPERTY_NAME);
+                            String propertyValue = resultSetProps.getString(PROPERTY_VALUE);
+                            CorrelationConfigPropertyDTO correlationConfigPropertyDTO =
+                                    new CorrelationConfigPropertyDTO(propertyName, propertyValue.split(","));
+                            correlationConfigPropertyDTOList.add(correlationConfigPropertyDTO);
+                        }
+
+                        CorrelationConfigDTO correlationConfigDTO = new CorrelationConfigDTO(componentName, enabled,
+                                correlationConfigPropertyDTOList);
+                        correlationConfigDTOList.add(correlationConfigDTO);
                     }
-                    resultSetProps.close();
-                    preparedStatementProps.close();
-
-                    CorrelationConfigDTO correlationConfigDTO =
-                            new CorrelationConfigDTO(componentName, enabled, correlationConfigPropertyDTOList);
-                    correlationConfigDTOList.add(correlationConfigDTO);
                 }
             }
         } catch (SQLException e) {
@@ -151,4 +156,58 @@ public class CorrelationConfigDAO {
         return correlationConfigDTOList;
     }
 
+    public boolean isConfigExist() throws APIManagementException {
+        String queryConfigs = SQLConstants.RETRIEVE_CORRELATION_COMPONENT_NAMES;
+        try (Connection connection = APIMgtDBUtil.getConnection();
+                PreparedStatement preparedStatementConfigs = connection.prepareStatement(queryConfigs);
+                ResultSet resultSetConfigs = preparedStatementConfigs.executeQuery()) {
+            return resultSetConfigs != null && resultSetConfigs.next();
+        } catch (SQLException e) {
+            throw new APIManagementException("Error while retrieving correlation configs" , e);
+        }
+    }
+
+    public void addDefaultCorrelationConfigs() throws APIManagementException {
+        String queryConfigs = SQLConstants.INSERT_CORRELATION_CONFIGS;
+        String queryProps = SQLConstants.INSERT_CORRELATION_CONFIG_PROPERTIES;
+
+        try (Connection connection = APIMgtDBUtil.getConnection()) {
+            try (PreparedStatement preparedStatementConfigs = connection.prepareStatement(queryConfigs);
+                    PreparedStatement preparedStatementProps = connection.prepareStatement(queryProps)) {
+
+                connection.setAutoCommit(false);
+                log.debug("Inserting into Correlation Configs");
+                for (String componentName : DEFAULT_CORRELATION_COMPONENTS) {
+                    String enabled = "false";
+
+                    preparedStatementConfigs.setString(1, componentName);
+                    preparedStatementConfigs.setString(2, enabled);
+                    preparedStatementConfigs.addBatch();
+                }
+                preparedStatementConfigs.executeBatch();
+
+                preparedStatementProps.setString(1, DENIED_THREADS);
+                preparedStatementProps.setString(2, "jdbc");
+                preparedStatementProps.setString(3, DEFAULT_DENIED_THREADS);
+                preparedStatementProps.executeUpdate();
+                connection.commit();
+
+            } catch (SQLException e) {
+                connection.rollback();
+                boolean isExist = false;
+                log.debug("Caught SQLException : " + e);
+                // If two concurrent calls to same method have been called, need not throw an error.
+                if (e.getMessage().contains("Unique index or primary key violation")) {
+                    isExist = isConfigExist();
+                }
+                if (isExist) {
+                    log.warn("Correlation configs are already persisted");
+                } else {
+                    throw new APIManagementException("Error while updating the correlation configs", e);
+                }
+            }
+        } catch (SQLException e) {
+            throw new APIManagementException("Error while updating the correlation configs", e);
+        }
+    }
 }

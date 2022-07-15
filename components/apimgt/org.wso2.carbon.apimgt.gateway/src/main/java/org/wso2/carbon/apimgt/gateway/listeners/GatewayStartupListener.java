@@ -185,7 +185,6 @@ public class GatewayStartupListener extends AbstractAxis2ConfigurationContextObs
                 new GatewayJMSMessageListener());
         copyTenantArtifacts();
         APILoggerManager.getInstance().initializeAPILoggerList();
-//        CorrelationConfigManager.getInstance().initializeCorrelationComponentList();
     }
 
     private void copyTenantArtifacts() {

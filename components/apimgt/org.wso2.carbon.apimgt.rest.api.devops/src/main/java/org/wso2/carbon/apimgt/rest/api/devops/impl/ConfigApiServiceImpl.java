@@ -1,8 +1,8 @@
 /*
  *
- *   Copyright (c) 2022, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *   Copyright (c) 2022, WSO2 LLC. (http://www.wso2.com) All Rights Reserved.
  *
- *   WSO2 Inc. licenses this file to you under the Apache License,
+ *   WSO2 LLC. licenses this file to you under the Apache License,
  *   Version 2.0 (the "License"); you may not use this file except
  *   in compliance with the License.
  *   You may obtain a copy of the License at
@@ -19,9 +19,7 @@
  */
 package org.wso2.carbon.apimgt.rest.api.devops.impl;
 
-import java.util.Arrays;
-import java.util.List;
-import javax.ws.rs.core.Response;
+
 import org.apache.cxf.jaxrs.ext.MessageContext;
 import org.wso2.carbon.apimgt.api.APIManagementException;
 import org.wso2.carbon.apimgt.devops.impl.correlation.ConfigCorrelationImpl;
@@ -30,7 +28,9 @@ import org.wso2.carbon.apimgt.rest.api.devops.ConfigApiService;
 import org.wso2.carbon.apimgt.rest.api.devops.DevopsAPIUtils;
 import org.wso2.carbon.apimgt.rest.api.devops.dto.CorrelationComponentsListDTO;
 import org.wso2.carbon.apimgt.rest.api.devops.dto.ErrorDTO;
-
+import java.util.Arrays;
+import java.util.List;
+import javax.ws.rs.core.Response;
 /**
  * The type Config api service.
  */
