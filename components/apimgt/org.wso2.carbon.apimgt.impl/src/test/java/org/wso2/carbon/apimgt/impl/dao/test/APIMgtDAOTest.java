@@ -1252,6 +1252,7 @@ public class APIMgtDAOTest {
         apiMgtDAO.convertNullThrottlingTiers();
         HashMap<String, String> result2 = apiMgtDAO.getURITemplatesPerAPIAsString(api.getUuid());
         Assert.assertTrue(result2.containsKey("/abc::GET::Any::Unlimited::abcd defgh fff"));
+        apiMgtDAO.deleteAPI(api.getUuid());
    }
 
     @Test

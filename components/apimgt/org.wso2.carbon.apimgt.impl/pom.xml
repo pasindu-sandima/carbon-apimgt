@@ -118,6 +118,10 @@
             <version>${carbon.identity.governance.version}</version>
         </dependency>
         <dependency>
+            <groupId>commons-dbcp.wso2</groupId>
+            <artifactId>commons-dbcp</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.governance</groupId>
             <artifactId>org.wso2.carbon.governance.registry.extensions</artifactId>
             <exclusions>

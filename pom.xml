@@ -1147,6 +1147,12 @@
             </dependency>
 
             <dependency>
+                <groupId>commons-dbcp.wso2</groupId>
+                <artifactId>commons-dbcp</artifactId>
+                <version>${orbit.version.commons.dbcp}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.user.mgt.stub</artifactId>
                 <version>${carbon.identity.version}</version>
@@ -1950,7 +1956,7 @@
 
         <carbon.analytics.common.version>5.2.41</carbon.analytics.common.version>
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.6.3</carbon.kernel.version>
+        <carbon.kernel.version>4.6.4-SNAPSHOT</carbon.kernel.version>
         <carbon.kernel.feature.version>4.6.3</carbon.kernel.feature.version>
         <carbon.kernel.package.import.version.range>[4.5.0, 5.0.0)</carbon.kernel.package.import.version.range>
 
@@ -2043,6 +2049,8 @@
         <synapse.version>2.1.7-wso2v307</synapse.version>
 
         <orbit.version.json>3.0.0.wso2v1</orbit.version.json>
+
+        <orbit.version.commons.dbcp>1.4.0.wso2v1</orbit.version.commons.dbcp>
 
         <!-- orbit httpmime versions-->
         <orbit.httpmime.version>4.3.1.wso2v2</orbit.httpmime.version>
